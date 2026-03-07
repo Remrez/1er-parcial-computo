@@ -10,6 +10,7 @@ server.listen()
 
 clients = []
 nicknames = []
+icons = []      # parallel list: icon index (0-4) per client
 
 def broadcast(message):
     for client in clients:
@@ -18,15 +19,17 @@ def broadcast(message):
 def handle(client):
     while True:
         try:
-            message = client.recv(1024)
+            message = client.recv(2048)
             broadcast(message)
         except:
             index = clients.index(client)
             clients.remove(client)
             client.close()
             nickname = nicknames[index]
-            broadcast(f'{nickname} dejo el chat.'.encode('utf-8'))
+            icon = icons[index]
+            broadcast(f'[ICON:{icon}]{nickname} dejo el chat.'.encode('utf-8'))
             nicknames.remove(nickname)
+            icons.remove(icon)
             break
 
 def receive():
@@ -34,13 +37,27 @@ def receive():
         client, address = server.accept()
         print(f"Conectado con {str(address)}")
 
+        # Ask for NICK (client responds with "nickname|icon_index")
         client.send("NICK".encode('ascii'))
-        nickname = client.recv(1024).decode('utf-8')
+        raw = client.recv(1024).decode('utf-8')
+
+        # Parse "nickname|icon_index"
+        if '|' in raw:
+            nickname, icon_str = raw.rsplit('|', 1)
+            try:
+                icon = int(icon_str)
+            except ValueError:
+                icon = 0
+        else:
+            nickname = raw
+            icon = 0
+
         nicknames.append(nickname)
+        icons.append(icon)
         clients.append(client)
 
-        print(f'Usuario del cliente es {nickname}!')
-        broadcast(f'{nickname} se unio al chat!'.encode('utf-8'))
+        print(f'Usuario: {nickname}  Icono: {icon}')
+        broadcast(f'[ICON:{icon}]{nickname} se unio al chat!'.encode('utf-8'))
         client.send('Conectado al servidor'.encode('utf-8'))
 
         thread = threading.Thread(target=handle, args=(client,))
