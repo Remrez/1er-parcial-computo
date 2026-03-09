@@ -169,9 +169,17 @@ tk.Label(title_bar, text="❤", bg=TITLE_BAR, fg="#ffffff", font=("Arial", 12)).
 tk.Label(title_bar, text=" Chat", bg=TITLE_BAR, fg="white",
          font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=6)
 
+def on_close():
+    try:
+        client.shutdown(socket.SHUT_RDWR)
+        client.close()
+    except Exception:
+        pass
+    window.destroy()
+
 close_button = tk.Button(title_bar, text="✕", bg=CLOSE_BUTTON,
                          fg="white", bd=0, font=("Arial", 12, "bold"),
-                         command=window.destroy, activebackground="#cc0066")
+                         command=on_close, activebackground="#cc0066")
 close_button.bind("<Enter>", lambda e: close_button.config(bg="#cc0066"))
 close_button.bind("<Leave>", lambda e: close_button.config(bg=CLOSE_BUTTON))
 close_button.pack(side=tk.RIGHT, padx=8, pady=3)
@@ -187,6 +195,7 @@ def move_window(event):
 
 title_bar.bind("<Button-1>", start_move)
 title_bar.bind("<B1-Motion>", move_window)
+window.protocol("WM_DELETE_WINDOW", on_close)
 
 chat_area = tk.Text(main_frame, bg=CHAT_COLOR, fg=TEXT_COLOR,
                     font=("Arial", 12),
@@ -259,8 +268,11 @@ def receive():
             else:
                 window.after(0, _insert_message, message)
         except Exception:
-            print("Ocurrio un error")
-            client.close()
+            print("Ocurrio un error / conexion cerrada")
+            try:
+                window.after(0, window.destroy)
+            except Exception:
+                pass
             break
 
 

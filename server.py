@@ -10,26 +10,42 @@ server.listen()
 
 clients = []
 nicknames = []
-icons = []      # parallel list: icon index (0-4) per client
+icons = []
+lock = threading.Lock()      # protects the three lists above
 
 def broadcast(message):
-    for client in clients:
-        client.send(message)
+    with lock:
+        targets = list(clients)   # snapshot so we don't hold the lock while sending
+    for c in targets:
+        try:
+            c.send(message)
+        except Exception:
+            pass   # broken client — handle() will clean it up
 
 def handle(client):
     while True:
         try:
             message = client.recv(2048)
+            if not message:          # empty bytes = clean disconnect
+                raise ConnectionResetError
             broadcast(message)
-        except:
-            index = clients.index(client)
-            clients.remove(client)
-            client.close()
-            nickname = nicknames[index]
-            icon = icons[index]
+        except Exception:
+            with lock:
+                if client in clients:
+                    index = clients.index(client)
+                    nickname = nicknames[index]
+                    icon = icons[index]
+                    clients.pop(index)
+                    nicknames.pop(index)
+                    icons.pop(index)
+                else:
+                    return   # already removed, nothing to do
+            try:
+                client.close()
+            except Exception:
+                pass
             broadcast(f'[ICON:{icon}]{nickname} dejo el chat.'.encode('utf-8'))
-            nicknames.remove(nickname)
-            icons.remove(icon)
+            print(f'{nickname} desconectado.')
             break
 
 def receive():
@@ -37,11 +53,9 @@ def receive():
         client, address = server.accept()
         print(f"Conectado con {str(address)}")
 
-        # Ask for NICK (client responds with "nickname|icon_index")
         client.send("NICK".encode('ascii'))
         raw = client.recv(1024).decode('utf-8')
 
-        # Parse "nickname|icon_index"
         if '|' in raw:
             nickname, icon_str = raw.rsplit('|', 1)
             try:
