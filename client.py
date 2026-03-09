@@ -79,7 +79,6 @@ class NicknameDialog(tk.Toplevel):
         icon_row = tk.Frame(self, bg=BG_COLOR)
         icon_row.pack(padx=24, pady=(0, 6))
 
-        # Load picker-sized copies (48 px) – still under the same master
         self._picker_imgs = []
         for i, path in enumerate(ICON_FILES):
             try:

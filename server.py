@@ -11,22 +11,22 @@ server.listen()
 clients = []
 nicknames = []
 icons = []
-lock = threading.Lock()      # protects the three lists above
+lock = threading.Lock()      #Lock para los arreglos
 
 def broadcast(message):
     with lock:
-        targets = list(clients)   # snapshot so we don't hold the lock while sending
+        targets = list(clients)   
     for c in targets:
         try:
             c.send(message)
         except Exception:
-            pass   # broken client — handle() will clean it up
+            pass   
 
 def handle(client):
     while True:
         try:
             message = client.recv(2048)
-            if not message:          # empty bytes = clean disconnect
+            if not message:          
                 raise ConnectionResetError
             broadcast(message)
         except Exception:
@@ -39,7 +39,7 @@ def handle(client):
                     nicknames.pop(index)
                     icons.pop(index)
                 else:
-                    return   # already removed, nothing to do
+                    return   
             try:
                 client.close()
             except Exception:
